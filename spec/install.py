@@ -19,8 +19,9 @@ class InstallLayout(Requirement):
     The same layout boots under BIOS and UEFI, so a disk moves between
     machines. /boot is a separate unencrypted partition so encryption
     (v2) only adds a step between partitioning and formatting. fstab uses
-    UUIDs. The installer refuses a target that is mounted, holds the live
-    medium, or is smaller than 8 GiB, and never touches another disk. It
+    UUIDs. The installer refuses a target that holds the live
+    medium or the running root, or is smaller than 8 GiB, and unmounts any
+    other mounts of the target, and never touches another disk. It
     prints the target and asks for the word yes before it writes, unless
     --yes is given."""
 
@@ -121,8 +122,10 @@ class InstallTui(Requirement):
     logic. Screens: Disk, You (username, password twice, hostname),
     Options (autologin, optional invite file), Confirm (the user types the
     disk name), Install (step list and log), Done (r reboots, q quits).
-    Disk lists only whole disks of at least 8 GiB with no mounted
-    partition, so the live medium is never offered. The password reaches
+    Disk lists every whole disk of at least 8 GiB (USB attached
+    included, mounted or not) except the one holding the live medium or the
+    running root, which is never offered. The engine unmounts the chosen
+    disk's other mounts before writing. The password reaches
     the engine only through a 0600 file in /run that is removed when the
     engine exits, never through argv. --image FILE --size SIZE skips the
     Disk screen and installs to an image file (tests). The engine path is

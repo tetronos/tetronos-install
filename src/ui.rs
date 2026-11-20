@@ -33,7 +33,7 @@ pub fn draw(f: &mut Frame, a: &App) {
             lines.push(Line::from("Select the disk to ERASE and install on:"));
             lines.push(Line::from(""));
             if a.disks.is_empty() {
-                lines.push(Line::from("No usable disk found (whole disks of 8 GiB or more, nothing mounted)."));
+                lines.push(Line::from("No usable disk found (whole disks of 8 GiB or more, other than the live medium)."));
             }
             for (i, d) in a.disks.iter().enumerate() {
                 lines.push(Line::from(Span::styled(

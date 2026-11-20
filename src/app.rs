@@ -107,7 +107,7 @@ impl App {
         match self.screen {
             Screen::Disk => {
                 if self.disks.is_empty() {
-                    self.error = "no usable disk (whole disks of 8 GiB or more, nothing mounted)".into();
+                    self.error = "no usable disk (whole disks of 8 GiB or more, other than the live medium)".into();
                 } else {
                     self.screen = Screen::User;
                 }
@@ -258,10 +258,13 @@ pub fn valid_hostname(h: &str) -> Result<(), String> {
     if ok { Ok(()) } else { Err("hostname: letters, digits, - and .".into()) }
 }
 
-/// Whole disks of at least MIN_DISK with no mounted descendant, from `lsblk -J -b` output.
+/// Whole disks of at least MIN_DISK, except the one holding the live medium or the running root, from `lsblk -J -b` output.
 pub fn parse_disks(json: &str) -> Vec<Disk> {
+    fn is_live(m: &str) -> bool {
+        m == "/" || m.starts_with("/run/live") || m.starts_with("/usr/lib/live") || m.starts_with("/lib/live")
+    }
     fn mounted(n: &serde_json::Value) -> bool {
-        let own = n["mountpoints"].as_array().is_some_and(|a| a.iter().any(|m| !m.is_null()));
+        let own = n["mountpoints"].as_array().is_some_and(|a| a.iter().any(|m| m.as_str().is_some_and(is_live)));
         own || n["children"].as_array().is_some_and(|c| c.iter().any(mounted))
     }
     let Ok(v) = serde_json::from_str::<serde_json::Value>(json) else { return vec![] };
@@ -302,16 +305,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn disks_skip_mounted_small_and_partitions() {
+    fn disks_skip_live_small_and_partitions() {
         let j = r#"{"blockdevices":[
           {"name":"sda","size":500107862016,"model":"SSD ","tran":"sata","type":"disk","mountpoints":[null],
            "children":[{"name":"sda1","size":1,"type":"part","mountpoints":["/run/live/medium"]}]},
           {"name":"nvme0n1","size":1000204886016,"model":"Micron","tran":"nvme","type":"disk","mountpoints":[null]},
+          {"name":"sdc","size":64000000000,"model":"USB stick","tran":"usb","type":"disk","mountpoints":[null],
+           "children":[{"name":"sdc1","size":1,"type":"part","mountpoints":["/media/erik/DATA"]}]},
           {"name":"sdb","size":4000000000,"model":"small","tran":"usb","type":"disk","mountpoints":[null]},
           {"name":"loop0","size":900000000000,"type":"loop","mountpoints":[null]}]}"#;
         let d = parse_disks(j);
-        assert_eq!(d.len(), 1);
+        assert_eq!(d.len(), 2);
         assert_eq!(d[0].path, "/dev/nvme0n1");
+        assert_eq!(d[1].path, "/dev/sdc");
     }
 
     #[test]
