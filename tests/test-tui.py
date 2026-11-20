@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run --with pyte python3
 """Drive tetronos-install-tui in a pty with --image (no real disk), then boot-check is left to boot-image.sh.
-Usage: sudo tests/test-tui.py SQUASHFS_DIR IMAGE   (engine runs with --source SQUASHFS_DIR --fetch-deps)
+Usage: sudo tests/test-tui.py SQUASHFS_DIR IMAGE   (engine runs with --source SQUASHFS_DIR)
 Checks: screens advance, bad input is refused, the install finishes with 'Installed', the image has the user."""
 import pyte, fcntl, os, pty, select, struct, subprocess, sys, termios, time
 
@@ -9,7 +9,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.dirname(here)
 wrapper = f"{root}/DO-NOT-COMMIT/work/engine-wrapper.sh"
 os.makedirs(os.path.dirname(wrapper), exist_ok=True)
-open(wrapper, "w").write(f'#!/bin/sh\nexec {root}/scripts/tetronos-install "$@" --source {sq} --fetch-deps\n')
+open(wrapper, "w").write(f'#!/bin/sh\nexec {root}/scripts/tetronos-install "$@" --source {sq}\n')
 os.chmod(wrapper, 0o755)
 if os.path.exists(img):
     sys.exit(f"{img} exists")

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Install the squashfs of an ISO into an image file twice, boot it (BIOS and UEFI), check the result.
-# Usage: sudo tests/test-install.sh ISO  (prototype uses --fetch-deps: needs network)
+# Usage: sudo tests/test-install.sh ISO  (prototype uses: needs network)
 set -e
 ISO="$1"; [ -f "$ISO" ] || { echo "usage: $0 ISO" >&2; exit 2; }
 H="$(cd "$(dirname "$0")/.." && pwd)"; W="$H/DO-NOT-COMMIT/work/test"; mkdir -p "$W/iso" "$W/sq"
@@ -9,7 +9,7 @@ cleanup() { umount "$W/sq" 2>/dev/null; umount "$W/iso" 2>/dev/null; umount "$W/
 trap cleanup EXIT
 mount -o loop,ro "$ISO" "$W/iso"; mount -o loop,ro "$W/iso/live/filesystem.squashfs" "$W/sq"
 echo pass1234 > "$W/pw"; chmod 600 "$W/pw"
-for n in 1 2; do rm -f "$W/i$n.img"; "$H/scripts/tetronos-install" --user tester --password-file "$W/pw" --source "$W/sq" --target-image "$W/i$n.img" --size 10G --yes --fetch-deps >"$W/i$n.log" 2>&1 && ok "install $n" || bad "install $n"; done
+for n in 1 2; do rm -f "$W/i$n.img"; "$H/scripts/tetronos-install" --user tester --password-file "$W/pw" --source "$W/sq" --target-image "$W/i$n.img" --size 10G --yes >"$W/i$n.log" 2>&1 && ok "install $n" || bad "install $n"; done
 mkdir -p "$W/m"; L=$(losetup -f --show -P "$W/i1.img"); mount "${L}p4" "$W/m"
 [ ! -s "$W/m/etc/machine-id" ] && ok "machine-id empty" || bad "machine-id"
 grep -q '^tester:' "$W/m/etc/passwd" && ok "user exists" || bad "user"
