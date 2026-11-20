@@ -79,7 +79,7 @@ class InstallBootloader(Requirement):
     of the build host. grub.cfg is made with update-grub in the target
     chroot when grub-mkconfig exists there, else a static grub.cfg is
     written from the kernels in /boot (root=UUID=...). The kernel command
-    line is the quiet default plus console=tty0 console=ttyS0,115200n8."""
+    line is console=tty0 console=ttyS0,115200n8 (no quiet: boot messages stay visible, as on the live system)."""
 
 
 class InstallToolsInImage( Requirement):
