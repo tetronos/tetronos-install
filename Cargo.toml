@@ -1,0 +1,22 @@
+[package]
+name = "tetronos-install-tui"
+version = "0.15.0"
+edition = "2024"
+description = "Full screen terminal front end of the TetronOS installer"
+license = "MPL-2.0"
+
+[[bin]]
+name = "tetronos-install-tui"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+serde_json = "1"
+anyhow = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+panic = "abort"

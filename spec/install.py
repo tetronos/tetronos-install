@@ -111,3 +111,19 @@ class InstallEncryptionLater(Requirement):
     chroot setup and bootloader are separate functions so a v2 encryption
     step (/home or full disk, LUKS2, cryptsetup-initramfs) is added
     between partition and format without restructuring."""
+
+
+class InstallTui(Requirement):
+    """tetronos-install-tui is the front end of M7: a ratatui full screen
+    program (keyboard only, 16 colors, so it works on a serial console and
+    under kmscon) that collects the answers and runs the engine
+    (/usr/sbin/tetronos-install) as a child process. It contains no install
+    logic. Screens: Disk, You (username, password twice, hostname),
+    Options (autologin, optional invite file), Confirm (the user types the
+    disk name), Install (step list and log), Done (r reboots, q quits).
+    Disk lists only whole disks of at least 8 GiB with no mounted
+    partition, so the live medium is never offered. The password reaches
+    the engine only through a 0600 file in /run that is removed when the
+    engine exits, never through argv. --image FILE --size SIZE skips the
+    Disk screen and installs to an image file (tests). The engine path is
+    TETRONOS_INSTALL_BIN or tetronos-install from PATH."""
