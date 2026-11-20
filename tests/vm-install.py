@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Install from inside the booted live ISO onto a second virtio disk, then boot that disk.
-Usage: tests/vm-install.py ISO bios|uefi   (needs kvm, qemu, OVMF for uefi; no sudo)
+Usage: [TARGET_DEV=/dev/sdX] tests/vm-install.py ISO bios|uefi   (needs kvm, qemu, OVMF for uefi; no sudo)
 The live system is driven over its serial console (tetronos/live). A partition on the
 target is mounted first, so the engine's unmount path runs. Work dir: DO-NOT-COMMIT/work/vm."""
 import os, re, socket, subprocess, sys, time
@@ -8,10 +8,13 @@ import os, re, socket, subprocess, sys, time
 iso, fw = os.path.abspath(sys.argv[1]), sys.argv[2]
 here = os.path.dirname(os.path.abspath(__file__))
 w = os.path.join(here, "..", "DO-NOT-COMMIT", "work", "vm"); os.makedirs(w, exist_ok=True)
-disk, sock = f"{w}/target-{fw}.raw", f"{w}/ser-{fw}.sock"
-for f in (disk, sock):
-    if os.path.exists(f): os.rename(f, f"{f}.{int(time.time())}")  # never overwrite
-subprocess.run(["truncate", "-s", "12G", disk], check=True)
+# TARGET_DEV=/dev/sdX: a real device (USB stick) instead of a 12G image; the caller grants access
+# (setfacl) and the device is ERASED. Never overwrite an existing image file.
+dev = os.environ.get("TARGET_DEV")
+disk, sock = dev or f"{w}/target-{fw}.raw", f"{w}/ser-{fw}.sock"
+for f in ((sock,) if dev else (disk, sock)):
+    if os.path.exists(f): os.rename(f, f"{f}.{int(time.time())}")
+if not dev: subprocess.run(["truncate", "-s", "12G", disk], check=True)
 fwargs = []
 if fw == "uefi":
     v = f"{w}/vars-{fw}.fd"; subprocess.run(["cp", "/usr/share/OVMF/OVMF_VARS_4M.fd", v], check=True)
@@ -51,9 +54,9 @@ try:
         if os.environ.get("V"): print("---", cmd[:60], "\n", out[-500:], flush=True)
         return rc, out
     run("echo pass1234 | sudo tee /run/pw >/dev/null; sudo chmod 600 /run/pw")
-    run("printf 'label: gpt\\n,\\n' | sudo sfdisk -q /dev/vda; sudo mkfs.ext4 -q /dev/vda1; sudo mount /dev/vda1 /mnt")
+    run("printf 'label: gpt\\n,\\n' | sudo sfdisk -q /dev/vda; sudo mkfs.ext4 -q /dev/vda1; sudo mount /dev/vda1 /mnt", 600)
     rc, out = run("findmnt -n /mnt"); check("target partition mounted before install", rc == 0)
-    rc, out = run("sudo tetronos-install --user tester --password-file /run/pw --yes /dev/vda 2>&1 | tail -4", 900)
+    rc, out = run("sudo tetronos-install --user tester --password-file /run/pw --yes /dev/vda 2>&1 | tail -4", 2400)
     rc, out = run("findmnt -n /mnt; echo; test -b /dev/vda4 && echo ha""s4"); check("engine unmounted /mnt and repartitioned", "has4" in out.split("\n",1)[1])
     rc, out = run("sudo mount /dev/vda4 /mnt && grep -c '^tester:' /mnt/etc/passwd; ls /mnt/boot/grub/grub.cfg; sudo umount /mnt", 60)
     check("installed system has user and grub.cfg", "grub.cfg" in out and "\n1\r" in out or "\r\n1\r" in out)
@@ -63,6 +66,6 @@ try:
     except subprocess.TimeoutExpired: q.kill(); q.wait()
 finally:
     if q.poll() is None: q.kill(); q.wait()
-r = subprocess.run([f"{here}/boot-image.sh", disk, fw, "180"])
+r = subprocess.run([f"{here}/boot-image.sh", disk, fw, os.environ.get("BOOT_T", "180")], env={**os.environ, "LOG": f"{w}/boot-{fw}.log"})
 check(f"installed disk boots ({fw})", r.returncode == 0)
 sys.exit(1 if fails else 0)

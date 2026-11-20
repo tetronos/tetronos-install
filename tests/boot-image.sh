@@ -3,7 +3,7 @@
 # Usage: tests/boot-image.sh IMG bios|uefi [timeout]. Exit 0 when "login:" appears. Log: IMG.<fw>.log
 set -e
 IMG="$1"; FW="${2:-bios}"; T="${3:-120}"
-LOG="$IMG.$FW.log"; rm -f "$LOG"; A=""
+LOG="${LOG:-$IMG.$FW.log}"; rm -f "$LOG"; A=""
 if [ "$FW" = uefi ]; then
 	V=$(mktemp); cp /usr/share/OVMF/OVMF_VARS_4M.fd "$V"
 	A="-drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd -drive if=pflash,format=raw,file=$V"
