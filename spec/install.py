@@ -33,7 +33,11 @@ class InstallNoLiveLeftovers(Requirement):
     chroot, then deletes any remaining live drop-in
     (kmsconvt@tty1 tetronos-autologin.conf, /etc/live) and rebuilds the
     initramfs for every kernel, so the installed system does not boot as a
-    live system and does not create the live user."""
+    live system and does not create the live user.
+    The installer also runs the work systemd would do on the first boot of
+    a changed /usr (ldconfig, the journal catalog, systemd-update-done, which
+    writes /etc/.updated and /var/.updated), so the first boot of the
+    installed system skips it."""
 
 
 class InstallIdentityFresh(Requirement):
