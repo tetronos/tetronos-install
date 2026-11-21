@@ -139,3 +139,16 @@ class InstallTui(Requirement):
     engine exits, never through argv. --image FILE --size SIZE skips the
     Disk screen and installs to an image file (tests). The engine path is
     TETRONOS_INSTALL_BIN or tetronos-install from PATH."""
+
+
+class InstallFlashProfile(Requirement):
+    """A removable or USB target gets the flash profile (USER 2026-11-21: the
+    installed system was unusably slow on a USB stick). Every synced write costs tens of
+    milliseconds on a flash stick, and dpkg flushes once per unpacked file
+    (measured 2026-11-21: 2970 flush requests for one small install,
+    668 with force-unsafe-io). The engine detects the target through
+    /sys/block/DISK/removable or a USB parent, or TETRONOS_FLASH=on|off. The profile is
+    noatime on the root mount in /etc/fstab and
+    /etc/dpkg/dpkg.cfg.d/90-tetronos-flash with force-unsafe-io (a power cut
+    during an apt run can leave a package half written). A fixed internal
+    disk keeps the stock settings."""
