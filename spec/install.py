@@ -79,7 +79,12 @@ class InstallBootloader(Requirement):
     of the build host. grub.cfg is made with update-grub in the target
     chroot when grub-mkconfig exists there, else a static grub.cfg is
     written from the kernels in /boot (root=UUID=...). The kernel command
-    line is console=tty0 console=ttyS0,115200n8 (no quiet: boot messages stay visible, as on the live system)."""
+    line is console=tty0 console=ttyS0,115200n8 (no quiet: boot messages stay visible, as on the live system).
+    The boot menu uses the live ISO theme (logo splash, green selection):
+    the installer copies theme.txt and splash.png from the live medium
+    (/boot/grub/live-theme and /boot/grub on /run/live/medium) to
+    /boot/grub/themes/tetronos, sets GRUB_THEME and gfxterm output (serial
+    stays), and keeps the plain text menu when the medium has no theme."""
 
 
 class InstallToolsInImage( Requirement):
