@@ -60,6 +60,8 @@ try:
     rc, out = run("findmnt -n /mnt; echo; test -b /dev/vda4 && echo ha""s4"); check("engine unmounted /mnt and repartitioned", "has4" in out.split("\n",1)[1])
     rc, out = run("sudo mount /dev/vda4 /mnt && grep -c '^tester:' /mnt/etc/passwd; ls /mnt/boot/grub/grub.cfg; sudo umount /mnt", 60)
     check("installed system has user and grub.cfg", "grub.cfg" in out and "\n1\r" in out or "\r\n1\r" in out)
+    rc, out = run("ls /run/live/medium/boot/grub/live-theme/theme.txt /run/live/medium/boot/grub/splash.png; sudo mount /dev/vda3 /mnt && ls /mnt/grub/themes/tetronos/theme.txt && grep -c 'set theme=' /mnt/grub/grub.cfg; sudo umount /mnt", 60)
+    check("installed grub has the live logo theme", "No such file" not in out and "themes/tetronos/theme.txt" in out)
     # the live medium must be refused (cdrom is not a disk; use the root overlay device name check via a loop of the squashfs)
     send("sudo systemctl poweroff\n")
     try: q.wait(timeout=120)
