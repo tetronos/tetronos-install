@@ -54,7 +54,7 @@ try:
         if os.environ.get("V"): print("---", cmd[:60], "\n", out[-500:], flush=True)
         return rc, out
     run("echo pass1234 | sudo tee /run/pw >/dev/null; sudo chmod 600 /run/pw")
-    run("printf 'label: gpt\\n,\\n' | sudo sfdisk -q /dev/vda; sudo mkfs.ext4 -q /dev/vda1; sudo mount /dev/vda1 /mnt", 600)
+    run("sudo dd if=/dev/zero of=/dev/vda bs=1M count=64 conv=fsync status=none; printf 'label: gpt\\n,\\n' | sudo sfdisk -q /dev/vda; sudo mkfs.ext4 -q -F /dev/vda1; sudo mount /dev/vda1 /mnt", 600)
     rc, out = run("findmnt -n /mnt"); check("target partition mounted before install", rc == 0)
     rc, out = run("sudo tetronos-install --user tester --password-file /run/pw --yes /dev/vda 2>&1 | tail -4", 2400)
     rc, out = run("findmnt -n /mnt; echo; test -b /dev/vda4 && echo ha""s4"); check("engine unmounted /mnt and repartitioned", "has4" in out.split("\n",1)[1])
