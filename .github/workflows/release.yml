@@ -1,0 +1,114 @@
+name: Release
+
+# Builds tetron-stt binaries and attaches them to the GitHub Release.
+# A push to main whose Cargo.toml version is new auto-tags and releases (an
+# agent that can only open/merge PRs can still ship); a v* tag push or a manual
+# dispatch also releases. Same shape as tetron-wm's release.yml.
+# sherpa-onnx and onnxruntime are linked statically from the k2-fsa prebuilt
+# archives the sherpa-onnx-sys build script downloads, so the binary needs no
+# shared libraries beyond libc. Models are not bundled: `tetron-stt models
+# download` fetches them on request.
+
+on:
+  push:
+    tags: ["v*"]
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.d.outputs.release }}
+      tag: ${{ steps.d.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          fetch-tags: ${{ github.ref_type != 'tag' }}
+      - id: d
+        run: |
+          ver="$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >>"$GITHUB_OUTPUT"
+            echo "release=true" >>"$GITHUB_OUTPUT"
+          elif [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            echo "tag=${{ github.ref_name }}" >>"$GITHUB_OUTPUT"
+            echo "release=true" >>"$GITHUB_OUTPUT"
+          else
+            tag="v$ver"
+            prev="$(git show HEAD~1:Cargo.toml 2>/dev/null | grep -m1 '^version' | sed -E 's/.*"(.*)".*/\1/' || true)"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "release=false" >>"$GITHUB_OUTPUT"
+              echo "Tag $tag already exists, nothing to release."
+            elif [ "$ver" = "$prev" ]; then
+              echo "release=false" >>"$GITHUB_OUTPUT"
+              echo "Version unchanged ($ver), nothing to release."
+            else
+              echo "tag=$tag" >>"$GITHUB_OUTPUT"
+              echo "release=true" >>"$GITHUB_OUTPUT"
+            fi
+          fi
+      # Create the release once before the matrix fans out, so the builders
+      # only attach and never race to create it.
+      - name: Create release up front
+        if: steps.d.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.d.outputs.tag }}"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --title "$tag" \
+              --notes "See CHANGELOG.md for the release notes."
+
+  build:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify tag matches Cargo.toml version
+        run: |
+          want="${{ needs.decide.outputs.tag }}"; want="${want#v}"
+          have="$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')"
+          if [ "$want" != "$have" ]; then
+            echo "::error::Release tag v$want does not match Cargo.toml version $have"
+            exit 1
+          fi
+      - name: Build (static musl)
+        run: |
+          sudo apt-get install -y -q musl-tools
+          rustup target add x86_64-unknown-linux-musl
+          cargo build --release --locked --target x86_64-unknown-linux-musl
+      - name: Package
+        run: |
+          b=target/x86_64-unknown-linux-musl/release/tetronos-install-tui
+          tar -czf tetronos-install-x86_64-unknown-linux-musl.tar.gz -C "$(dirname $b)" tetronos-install-tui -C "$PWD/scripts" tetronos-install
+          sha256sum tetronos-install-x86_64-unknown-linux-musl.tar.gz > tetronos-install-x86_64-unknown-linux-musl.tar.gz.sha256
+      - name: Build .deb
+        id: deb
+        uses: tetronos/tetron-packaging@87d8405791a0e679af6deb720fe932410f38feb5
+        with:
+          binary: target/x86_64-unknown-linux-musl/release/tetronos-install-tui
+          deb-toml: packaging/deb.toml
+          version: ${{ needs.decide.outputs.tag }}
+          arch: amd64
+          maintainer: ${{ vars.DEB_MAINTAINER }}
+          smoke: tetronos-install-tui --version
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.decide.outputs.tag }}
+          files: |
+            tetronos-install-x86_64-unknown-linux-musl.tar.gz
+            tetronos-install-x86_64-unknown-linux-musl.tar.gz.sha256
+            ${{ steps.deb.outputs.deb }}
+            ${{ steps.deb.outputs.sha256 }}

@@ -1,0 +1,42 @@
+# Package description for mkdeb (https://github.com/tetronos/tetron-packaging).
+# Built in release CI by the build-deb action: the static musl TUI, the engine
+# script, the installer unit on tty1 and the drop-ins that keep the login off
+# tty1 while it runs.
+name = "tetronos-install"
+description = "TetronOS installer: copies the live system to a disk"
+long_description = """
+Installs the running live system to a disk or an image file: GPT with
+bios_boot, ESP, /boot and root (ext4), the user, GRUB for BIOS and UEFI.
+Needs no network. Includes the full screen front end (tetronos-install-tui,
+static musl), started on tty1 by the boot menu entry Install TetronOS."""
+section = "admin"
+license = "MPL-2.0"
+homepage = "https://github.com/tetronos/tetronos-install"
+depends = ["grub2-common", "grub-pc-bin", "grub-efi-amd64-bin", "e2fsprogs", "dosfstools",
+           "rsync", "zstd", "util-linux", "fdisk", "openssl", "initramfs-tools"]
+smoke = "tetronos-install-tui --version"
+
+[[files]]
+src = "binary"
+dst = "usr/sbin/tetronos-install-tui"
+mode = "0755"
+
+[[files]]
+src = "../scripts/tetronos-install"
+dst = "usr/sbin/tetronos-install"
+mode = "0755"
+
+[[files]]
+src = "files/tetronos-install-tui.service"
+dst = "usr/lib/systemd/system/tetronos-install-tui.service"
+mode = "0644"
+
+[[files]]
+src = "files/tetronos-install-login-skip.conf"
+dst = "usr/lib/systemd/system/kmsconvt@.service.d/tetronos-install-skip.conf"
+mode = "0644"
+
+[[files]]
+src = "files/tetronos-install-login-skip.conf"
+dst = "usr/lib/systemd/system/getty@.service.d/tetronos-install-skip.conf"
+mode = "0644"

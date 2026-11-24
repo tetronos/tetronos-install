@@ -19,7 +19,11 @@ fn main() -> anyhow::Result<()> {
         match a.as_str() {
             "--image" => file = it.next(),
             "--size" => size = it.next(),
-            _ => anyhow::bail!("usage: tetronos-install-tui [--image FILE --size SIZE]"),
+            "--version" => {
+                println!("tetronos-install-tui {}", env!("CARGO_PKG_VERSION"));
+                return Ok(());
+            }
+            _ => anyhow::bail!("usage: tetronos-install-tui [--image FILE --size SIZE] | --version"),
         }
     }
     if let (Some(f), Some(s)) = (file, size) {

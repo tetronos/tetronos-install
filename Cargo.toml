@@ -1,6 +1,6 @@
 [package]
 name = "tetronos-install-tui"
-version = "0.15.0"
+version = "0.15.1"
 edition = "2024"
 description = "Full screen terminal front end of the TetronOS installer"
 license = "MPL-2.0"
